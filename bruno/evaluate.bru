@@ -1,0 +1,17 @@
+meta {
+  name: evaluate
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:5000/evaluate
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "payload": "1+2*3+4"
+  }
+}

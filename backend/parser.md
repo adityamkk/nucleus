@@ -1,0 +1,6 @@
+<expression> ::= <constant> | <expression> <binary_operator_as> <expression> | <expression> <binary_operator_md> <expression> | <expression> <binary_operator_e> <expression> | <function>"(" <expression> ")" | "(" <expression> ")"
+<function> ::= "sin" | "cos" | "tan" | "log" | "ln"
+<constant> ::= <float> || "pi" || "e"
+<binary_operator_e> ::= "^"
+<binary_operator_md> ::= "*" | "/"
+<binary_operator_as> ::= "+" | "-"

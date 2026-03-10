@@ -1,129 +1,320 @@
 import { useState, useEffect } from "react";
 
-const buttons = [
-  "7","8","9","/",
-  "4","5","6","*",
-  "1","2","3","-",
-  "0",".","(",")",
-  "+","^","pi","e",
-  "sin","cos","tan","log","ln"
-];
-
 export default function App() {
   const [input, setInput] = useState("");
-  const [history, setHistory] = useState<{expr:string,result:string}[]>([]);
+  const [history, setHistory] = useState<{ expr: string; result: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
-  function append(value:string){
-    if(["sin","cos","tan","log","ln"].includes(value)){
-      setInput(prev => prev + value + "(");
+  function append(value: string) {
+    if (["sin", "cos", "tan", "log", "ln"].includes(value)) {
+      setInput((prev) => prev + value + "(");
     } else {
-      setInput(prev => prev + value);
+      setInput((prev) => prev + value);
     }
   }
 
-  function clear(){
+  function clear() {
     setInput("");
   }
 
-  async function submit(){
-    if(!input.trim()) return;
+  function backspace() {
+    setInput((prev) => prev.slice(0, -1));
+  }
 
-    console.log(input);
+  async function submit() {
+    if (!input.trim()) return;
 
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/evaluate",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ payload: input })
+      const res = await fetch("http://localhost:5000/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload: input }),
       });
 
       const data = await res.json();
-
       const value = typeof data === "number" ? data.toString() : String(data);
 
-      setHistory(prev => [...prev,{expr:input,result:value}]);
+      setHistory((prev) => [...prev, { expr: input, result: value }]);
       setInput("");
-    } catch(err) {
-      setHistory(prev => [...prev,{expr:input,result:`Error contacting server ${err}`}]);
+    } catch (err) {
+      setHistory((prev) => [
+        ...prev,
+        { expr: input, result: `Error contacting server ${err}` },
+      ]);
     }
 
     setLoading(false);
   }
 
-  useEffect(()=>{
-    function handleKey(e:KeyboardEvent){
-      if(e.key === "Enter"){
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Enter") {
         submit();
         return;
       }
 
       const allowed = "0123456789.+-*/^()";
 
-      if(allowed.includes(e.key)){
-        setInput(prev=>prev+e.key);
+      if (allowed.includes(e.key)) {
+        setInput((prev) => prev + e.key);
       }
 
-      if(e.key === "Backspace"){
-        setInput(prev=>prev.slice(0,-1));
+      if (e.key === "Backspace") {
+        setInput((prev) => prev.slice(0, -1));
       }
     }
 
-    window.addEventListener("keydown",handleKey);
-    return ()=>window.removeEventListener("keydown",handleKey);
-  },[input]);
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [input]);
+
+  const styles: { [key: string]: React.CSSProperties } = {
+    page: {
+      width: "100vw",
+      height: "100vh",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      background: "linear-gradient(135deg,#dbeafe,#e9d5ff,#fbcfe8)",
+      fontFamily: "sans-serif",
+    },
+
+    calculator: {
+      width: "90vw",
+      height: "90vh",
+      maxWidth: 1200,
+      background: "white",
+      borderRadius: 24,
+      padding: 30,
+      boxShadow: "0 15px 40px rgba(0,0,0,0.2)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      gap: 30,
+    },
+
+    screen: {
+      width: "100%",
+      background: "#e2e8f0",
+      borderRadius: 16,
+      padding: 16,
+      boxShadow: "inset 0 3px 8px rgba(0,0,0,0.15)",
+      border: "1px solid #cbd5e1",
+    },
+
+    input: {
+      textAlign: "right",
+      fontSize: 34,
+      color: "#0f172a",
+      background: "#f8fafc",
+      padding: "12px 14px",
+      borderRadius: 10,
+      marginBottom: 12,
+      minHeight: 44,
+      fontFamily: "monospace",
+      border: "1px solid #cbd5e1",
+    },
+
+    history: {
+      background: "#f8fafc",
+      borderRadius: 10,
+      border: "1px solid #cbd5e1",
+      padding: 12,
+      maxHeight: "25vh",
+      overflowY: "auto",
+      fontSize: 18,
+      color: "#0f172a",
+    },
+
+    historyEntry: {
+      marginBottom: 14,
+      paddingBottom: 6,
+      borderBottom: "1px solid #e2e8f0",
+    },
+
+    expr: {
+      textAlign: "left",
+      color: "#475569",
+      fontFamily: "monospace",
+    },
+
+    result: {
+      textAlign: "right",
+      fontWeight: 700,
+      fontSize: 20,
+      color: "#0f172a",
+      fontFamily: "monospace",
+    },
+
+    buttonArea: {
+      display: "flex",
+      gap: 60,
+      justifyContent: "center",
+      alignItems: "flex-start",
+      width: "100%",
+    },
+
+    numberGrid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(3,90px)",
+      gap: 18,
+    },
+
+    operatorCol: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 18,
+    },
+
+    button: {
+      width: 90,
+      height: 70,
+      borderRadius: 14,
+      border: "none",
+      cursor: "pointer",
+      fontSize: 24,
+      color: "#0f172a",
+      boxShadow: "0 3px 8px rgba(0,0,0,0.25)",
+    },
+
+    numberButton: { background: "#bfdbfe" },
+    operatorButton: { background: "#fbcfe8" },
+    funcButton: { background: "#c7d2fe" },
+    clearButton: { background: "#fecaca" },
+    enterButton: { background: "#bbf7d0" },
+    backButton: { background: "#fde68a" },
+
+    funcRow: {
+      display: "grid",
+      gridTemplateColumns: "repeat(7,1fr)",
+      gap: 18,
+      width: "100%",
+    },
+
+    funcBtn: {
+      height: 55,
+      borderRadius: 12,
+      border: "none",
+      cursor: "pointer",
+      fontSize: 18,
+      color: "#0f172a",
+      boxShadow: "0 3px 8px rgba(0,0,0,0.2)",
+      background: "#c7d2fe",
+      fontFamily: "monospace",
+    },
+  };
+
+  const numbers = ["7", "8", "9", "4", "5", "6", "1", "2", "3"];
+  const operators = ["+", "-", "*", "/", "^"];
+  const functions = ["sin", "cos", "tan", "log", "ln", "pi", "e"];
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white shadow-xl rounded-2xl p-6 w-[360px]">
+    <div style={styles.page}>
+      <div style={styles.calculator}>
 
-        <div className="mb-4">
-          <div className="border rounded-lg p-3 text-right text-xl min-h-[40px]">
-            {input}
+        <div style={styles.screen}>
+          <div style={styles.input}>{input}</div>
+
+          <div style={styles.history}>
+            {history.map((h, i) => (
+              <div key={i} style={styles.historyEntry}>
+                <div style={styles.expr}>{h.expr}</div>
+                <div style={styles.result}>{h.result}</div>
+              </div>
+            ))}
+
+            {loading && (
+              <div style={{ textAlign: "right", color: "gray" }}>
+                Computing...
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2 mb-3">
-          {buttons.map(b => (
+        <div style={styles.buttonArea}>
+          <div style={styles.numberGrid}>
+            {numbers.map((n) => (
+              <button
+                key={n}
+                style={{ ...styles.button, ...styles.numberButton }}
+                onClick={() => append(n)}
+              >
+                {n}
+              </button>
+            ))}
+
             <button
-              key={b}
-              onClick={()=>append(b)}
-              className="bg-gray-200 hover:bg-gray-300 rounded-lg p-2"
+              style={{ ...styles.button, ...styles.numberButton, gridColumn: "span 3", width: "100%" }}
+              onClick={() => append("0")}
             >
-              {b}
+              0
+            </button>
+
+            <button
+              style={{ ...styles.button, ...styles.numberButton }}
+              onClick={() => append(".")}
+            >
+              .
+            </button>
+
+            <button
+              style={{ ...styles.button, ...styles.funcButton }}
+              onClick={() => append("(")}
+            >
+              (
+            </button>
+
+            <button
+              style={{ ...styles.button, ...styles.funcButton }}
+              onClick={() => append(")")}
+            >
+              )
+            </button>
+          </div>
+
+          <div style={styles.operatorCol}>
+            {operators.map((op) => (
+              <button
+                key={op}
+                style={{ ...styles.button, ...styles.operatorButton }}
+                onClick={() => append(op)}
+              >
+                {op}
+              </button>
+            ))}
+
+            <button
+              style={{ ...styles.button, ...styles.backButton }}
+              onClick={backspace}
+            >
+              ⌫
+            </button>
+
+            <button
+              style={{ ...styles.button, ...styles.clearButton }}
+              onClick={clear}
+            >
+              C
+            </button>
+
+            <button
+              style={{ ...styles.button, ...styles.enterButton }}
+              onClick={submit}
+            >
+              =
+            </button>
+          </div>
+        </div>
+
+        <div style={styles.funcRow}>
+          {functions.map((f) => (
+            <button key={f} style={styles.funcBtn} onClick={() => append(f)}>
+              {f}
             </button>
           ))}
-        </div>
-
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={clear}
-            className="flex-1 bg-red-400 hover:bg-red-500 text-white rounded-lg p-2"
-          >
-            Clear
-          </button>
-
-          <button
-            onClick={submit}
-            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg p-2"
-          >
-            Enter
-          </button>
-        </div>
-
-        <div className="border-t pt-3 max-h-[300px] overflow-y-auto">
-          {history.slice().reverse().map((h,i)=>(
-            <div key={i} className="mb-2">
-              <div className="text-left text-gray-700">{h.expr}</div>
-              <div className="text-right font-semibold">{h.result}</div>
-            </div>
-          ))}
-
-          {loading && (
-            <div className="text-right text-gray-400">Computing...</div>
-          )}
         </div>
 
       </div>

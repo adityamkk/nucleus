@@ -1,0 +1,287 @@
+Prompt 1:
+Given a string, I want you to implement the parse function in typescript with the following language syntax: 
+function parse(payload: string): string { return "" } 
+
+<expression> ::= <constant> | <expression> <binary_operator_as> <expression> | <expression> <binary_operator_md> <expression> | <expression> <binary_operator_e> <expression> | <function>"(" <expression> ")" | "(" <expression> ")" 
+<function> ::= "sin" | "cos" | "tan" | "log" | "ln" 
+<constant> ::= <float> || "pi" || "e" 
+<binary_operator_e> ::= "^" 
+<binary_operator_md> ::= "*" | "/" 
+<binary_operator_as> ::= "+" | "-" 
+
+Normal operator precedence rules apply
+
+Output 1:
+function parse(payload: string): string {
+    const input = payload.replace(/\s+/g, "");
+    let i = 0;
+
+    function peek(): string {
+        return input[i];
+    }
+
+    function consume(): string {
+        return input[i++];
+    }
+
+    function match(str: string): boolean {
+        if (input.slice(i, i + str.length) === str) {
+            i += str.length;
+            return true;
+        }
+        return false;
+    }
+
+    function parseExpression(): string {
+        let left = parseTerm();
+
+        while (peek() === "+" || peek() === "-") {
+            const op = consume();
+            const right = parseTerm();
+            left = `(${left}${op}${right})`;
+        }
+
+        return left;
+    }
+
+    function parseTerm(): string {
+        let left = parsePower();
+
+        while (peek() === "*" || peek() === "/") {
+            const op = consume();
+            const right = parsePower();
+            left = `(${left}${op}${right})`;
+        }
+
+        return left;
+    }
+
+    function parsePower(): string {
+        let left = parsePrimary();
+
+        while (peek() === "^") {
+            const op = consume();
+            const right = parsePrimary();
+            left = `(${left}${op}${right})`;
+        }
+
+        return left;
+    }
+
+    function parsePrimary(): string {
+        // Parentheses
+        if (peek() === "(") {
+            consume();
+            const expr = parseExpression();
+            if (consume() !== ")") {
+                throw new Error("Missing closing parenthesis");
+            }
+            return expr;
+        }
+
+        // Functions
+        const funcs = ["sin", "cos", "tan", "log", "ln"];
+        for (const f of funcs) {
+            if (match(f)) {
+                if (consume() !== "(") {
+                    throw new Error("Expected '(' after function");
+                }
+                const arg = parseExpression();
+                if (consume() !== ")") {
+                    throw new Error("Missing closing parenthesis");
+                }
+                return `${f}(${arg})`;
+            }
+        }
+
+        // Constants
+        if (match("pi")) return "pi";
+        if (match("e")) return "e";
+
+        // Float
+        const numMatch = input.slice(i).match(/^\d+(\.\d+)?/);
+        if (numMatch) {
+            i += numMatch[0].length;
+            return numMatch[0];
+        }
+
+        throw new Error(`Unexpected token at position ${i}`);
+    }
+
+    const result = parseExpression();
+
+    if (i !== input.length) {
+        throw new Error("Unexpected trailing input");
+    }
+
+    return result;
+}
+
+Prompt 2:
+Please adapt this function to evaluate the expression using standard math tools
+
+Output 2:
+function parse(payload: string): number {
+    const input = payload.replace(/\s+/g, "");
+    let i = 0;
+
+    function peek(): string {
+        return input[i];
+    }
+
+    function consume(): string {
+        return input[i++];
+    }
+
+    function match(str: string): boolean {
+        if (input.slice(i, i + str.length) === str) {
+            i += str.length;
+            return true;
+        }
+        return false;
+    }
+
+    function parseExpression(): number {
+        let left = parseTerm();
+
+        while (peek() === "+" || peek() === "-") {
+            const op = consume();
+            const right = parseTerm();
+
+            if (op === "+") left += right;
+            else left -= right;
+        }
+
+        return left;
+    }
+
+    function parseTerm(): number {
+        let left = parsePower();
+
+        while (peek() === "*" || peek() === "/") {
+            const op = consume();
+            const right = parsePower();
+
+            if (op === "*") left *= right;
+            else left /= right;
+        }
+
+        return left;
+    }
+
+    function parsePower(): number {
+        let left = parsePrimary();
+
+        while (peek() === "^") {
+            consume();
+            const right = parsePrimary();
+            left = Math.pow(left, right);
+        }
+
+        return left;
+    }
+
+    function parsePrimary(): number {
+        if (peek() === "(") {
+            consume();
+            const value = parseExpression();
+            if (consume() !== ")") {
+                throw new Error("Missing closing parenthesis");
+            }
+            return value;
+        }
+
+        const funcs = ["sin", "cos", "tan", "log", "ln"];
+        for (const f of funcs) {
+            if (match(f)) {
+                if (consume() !== "(") {
+                    throw new Error("Expected '(' after function");
+                }
+
+                const arg = parseExpression();
+
+                if (consume() !== ")") {
+                    throw new Error("Missing closing parenthesis");
+                }
+
+                switch (f) {
+                    case "sin": return Math.sin(arg);
+                    case "cos": return Math.cos(arg);
+                    case "tan": return Math.tan(arg);
+                    case "log": return Math.log10(arg);
+                    case "ln": return Math.log(arg);
+                }
+            }
+        }
+
+        if (match("pi")) return Math.PI;
+        if (match("e")) return Math.E;
+
+        const numMatch = input.slice(i).match(/^\d+(\.\d+)?/);
+        if (numMatch) {
+            i += numMatch[0].length;
+            return parseFloat(numMatch[0]);
+        }
+
+        throw new Error(`Unexpected token at position ${i}`);
+    }
+
+    const result = parseExpression();
+
+    if (i !== input.length) {
+        throw new Error("Unexpected trailing input");
+    }
+
+    return result;
+}
+
+Prompt 3:
+Please construct a simple react app for a calculator app. 
+The user should be presented with buttons similar to that of a simple calculator capable of arithmetic operations, sin, cos, tan, log, and ln. 
+When the user clicks on these buttons or types characters, they should appear within a window. 
+When the user clicks the "enter" button or presses the enter key, the string constructed should be sent to a backend endpoint (more on this in a bit). 
+The endpoint will return either a floating point number or an error string. Either way, display this returned value below what the user inputted, aligned to the right side of the window. 
+Keep a history of what the user has sent, and the responses received. 
+
+The backend endpoint can be hit at "http://localhost:5000/evaluate" 
+The data is sent in JSON format in the request body. 
+The request should look as follows: { "payload": "<user input text>" }
+
+Output 3:
+<code similar to frontend/App.tsx>
+
+Prompt 4:
+While the layout is a little bit nicer and the history does appear at the top instead of the bottom, the buttons are still not in the center of the screen, and the history is not enclosed in its own visibly distinct div. 
+Please ensure that the buttons and history are in the center of the screen, the history div has a distinct inner color compared to the background, and the buttons are spaced out (larger margin)
+
+Output 4:
+<modified frontend/App.tsx>
+
+Prompt 5:
+Please modify the code to not use tailwindcss.
+
+Output 5:
+<modified frontend/App.tsx to use custom CSS>
+
+Prompt 6:
+While this looks a lot better, please make the calculator fill up the whole screen. It is only using a 5th of the entire screen and the entire calculator is stuck to the left side of the screen.
+
+Output 6:
+<modified frontend/App.tsx to fill up whole screen>
+
+Prompt 7:
+I cannot actually see the expressions I am typing in the window (i.e. I cannot see the current value of input) 
+Additionally, I cannot see the answers that I've produced in the history. 
+However, I can see the expressions I used, but these expressions are displayed in plain text, which looks weird. 
+Please fix these issues
+
+Output 7:
+<modified frontend/App.tsx to visibly show text appearing when I type>
+
+Prompt 8:
+Please limit the history so that the buttons at the bottom don't fall off the screen. 
+As the history grows larger, the buttons at the bottom (sin, cos, etc.) start falling off the screen. 
+Make sure that the buttons on the calculator do not move
+
+Output 8:
+<frontend/App.tsx>

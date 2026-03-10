@@ -1,0 +1,148 @@
+Prompt:
+Consider the following flask app: 
+# app.py import os import json import sqlite3 import hashlib from flask import Flask, request app = Flask(__name__) DB_PATH = os.getenv("DB_PATH", "/tmp/app.db") WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "dev-secret") # default for dev def get_db(): return sqlite3.connect(DB_PATH) def verify(sig, body: bytes) -> bool: # Vendor docs: SHA256(secret + body) expected = hashlib.sha256( (WEBHOOK_SECRET + body.decode("utf-8")).encode("utf-8") ).hexdigest() return expected == sig # simple compare @app.post("/webhook") def webhook(): raw = request.data # bytes sig = request.headers.get("X-Signature", "") if not verify(sig, raw): return ("bad sig", 401) payload = json.loads(raw.decode("utf-8")) # Example payload: # {"email":"a@b.com","role":"admin","metadata":{"source":"vendor"}} email = payload.get("email", "") role = payload.get("role", "user") db = get_db() cur = db.cursor() # Store raw payload for auditing / debugging cur.execute( f"INSERT INTO webhook_audit(email, raw_json) VALUES ('{email}', '{raw.decode('utf-8')}')" ) # Upsert user cur.execute( f"INSERT INTO users(email, role) VALUES('{email}', '{role}')" ) db.commit() return ("ok", 200) if __name__ == "__main__": app.run(host="0.0.0.0", port=8080) 
+Here are a few issues with this code: 
+If an email or role is not provided, the user metadata is never checked to see if the user is actually a vendor. 
+The code needs to check if (1) a metadata field exists, (2) a source field in the metadata field exists, and (3) the value of source is a string literal "vendor". 
+Similar levels of rigorous checks need to be performed on the inputs. 
+Please identify (do not change code) where these vulnerabilities are in the code and suggest at a high level how you would fix them. 
+In addition, search for any other problems in the code.
+
+Output:
+1. Verification / Signature Check
+def verify(sig, body: bytes) -> bool:
+    expected = hashlib.sha256(
+        (WEBHOOK_SECRET + body.decode("utf-8")).encode("utf-8")
+    ).hexdigest()
+    return expected == sig
+Issues:
+
+Timing attack vulnerability: Using == for signature comparison can be exploited via timing attacks.
+
+Assumes UTF-8 encoding: body.decode("utf-8") will fail if the webhook sends non-UTF-8 bytes.
+
+No exception handling: Malformed bytes could crash the server.
+
+Suggested fixes:
+
+Use hmac.compare_digest(expected, sig) for constant-time comparison.
+
+Wrap decoding in a try/except to handle malformed input gracefully.
+
+2. JSON / Payload parsing
+payload = json.loads(raw.decode("utf-8"))
+email = payload.get("email", "")
+role = payload.get("role", "user")
+Issues:
+
+No type or format checks: email or role could be None, numbers, or even objects instead of strings.
+
+No validation of allowed roles: Any client can send "role": "admin" and it will be accepted.
+
+Missing metadata validation: The code comments indicate metadata is important for checking source == "vendor", but no check is done.
+
+Suggested fixes:
+
+Validate that email is a string and matches a proper email regex.
+
+Validate role against a whitelist (e.g., ["user", "admin"]).
+
+Check if metadata exists, is a dictionary, and if metadata.get("source") == "vendor" before applying any special logic.
+
+3. SQL Injection Risk
+cur.execute(
+    f"INSERT INTO webhook_audit(email, raw_json) VALUES ('{email}', '{raw.decode('utf-8')}')"
+)
+cur.execute(
+    f"INSERT INTO users(email, role) VALUES('{email}', '{role}')"
+)
+Issues:
+
+Direct string interpolation into SQL: This is classic SQL injection. Any field (email, role, or raw) can contain SQL code.
+
+Example exploit: sending email = "a@b.com'); DROP TABLE users;--" could drop the users table.
+
+Suggested fixes:
+
+Use parameterized queries instead of string formatting:
+
+cur.execute(
+    "INSERT INTO webhook_audit(email, raw_json) VALUES (?, ?)", 
+    (email, raw.decode("utf-8"))
+)
+cur.execute(
+    "INSERT INTO users(email, role) VALUES(?, ?)", 
+    (email, role)
+)
+4. Upsert Logic / Duplicate Handling
+cur.execute(
+    f"INSERT INTO users(email, role) VALUES('{email}', '{role}')"
+)
+Issues:
+
+If the user already exists, this will fail. There’s no proper upsert logic.
+
+Could allow multiple entries for the same email if not careful.
+
+Suggested fixes:
+
+Use INSERT OR REPLACE or INSERT ... ON CONFLICT(email) DO UPDATE SET role=excluded.role.
+
+5. Raw Payload Storage
+cur.execute(
+    f"INSERT INTO webhook_audit(email, raw_json) VALUES ('{email}', '{raw.decode('utf-8')}')"
+)
+Issues:
+
+No length check: Very large payloads could crash the DB.
+
+No sanitization: Special characters in raw JSON could break SQL without parameterized queries.
+
+Suggested fixes:
+
+Parameterized queries (as above).
+
+Optionally enforce max payload size.
+
+6. Environment Variable Defaults
+DB_PATH = os.getenv("DB_PATH", "/tmp/app.db")
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "dev-secret")  # default for dev
+Issues:
+
+Weak default secret: Using "dev-secret" in production is unsafe.
+
+No path validation: DB_PATH could point to sensitive system files if misconfigured.
+
+Suggested fixes:
+
+Require WEBHOOK_SECRET to be set in production, fail startup if not.
+
+Validate DB_PATH to ensure it points to a safe location.
+
+7. General Error Handling
+
+No try/except around database operations. A malformed request could crash the endpoint.
+
+No logging of failures besides returning HTTP 401.
+
+No handling of malformed JSON.
+
+Suggested fixes:
+
+Wrap DB operations in try/except.
+
+Return 400 for malformed JSON, 500 for DB errors.
+
+Log exceptions securely without exposing secrets.
+
+8. Missing HTTP Security Headers / Rate Limiting
+
+The endpoint is open to the internet and only relies on signature.
+
+No rate limiting, CSRF, or other protections.
+
+Suggested fixes:
+
+Implement rate limiting per IP or per signature.
+
+Set HTTP headers like X-Content-Type-Options, Content-Security-Policy where relevant.

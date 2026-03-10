@@ -131,7 +131,7 @@ function parse(payload: string): number {
     return result;
 }
 
-app.get('/evaluate', (req, res) => {
+app.post('/evaluate', (req, res) => {
     const payload = req.body as EvalPayload;
     try {
         res.send(parse(payload.payload))

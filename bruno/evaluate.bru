@@ -4,7 +4,7 @@ meta {
   seq: 2
 }
 
-get {
+post {
   url: http://localhost:5000/evaluate
   body: json
   auth: none
@@ -12,6 +12,6 @@ get {
 
 body:json {
   {
-    "payload": "1+2*3+4"
+    "payload": "1+2*3+4+5"
   }
 }

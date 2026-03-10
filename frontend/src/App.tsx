@@ -1,70 +1,132 @@
-// import { useState } from 'react'
-// import reactLogo from './assets/react.svg'
-// import viteLogo from '/vite.svg'
-// import './App.css'
+import { useState, useEffect } from "react";
 
-// function App() {
-//   const [count, setCount] = useState(0)
+const buttons = [
+  "7","8","9","/",
+  "4","5","6","*",
+  "1","2","3","-",
+  "0",".","(",")",
+  "+","^","pi","e",
+  "sin","cos","tan","log","ln"
+];
 
-//   return (
-//     <>
-//       <div>
-//         <a href="https://vite.dev" target="_blank">
-//           <img src={viteLogo} className="logo" alt="Vite logo" />
-//         </a>
-//         <a href="https://react.dev" target="_blank">
-//           <img src={reactLogo} className="logo react" alt="React logo" />
-//         </a>
-//       </div>
-//       <h1>Vite + React</h1>
-//       <div className="card">
-//         <button onClick={() => setCount((count) => count + 1)}>
-//           count is {count}
-//         </button>
-//         <p>
-//           Edit <code>src/App.tsx</code> and save to test HMR
-//         </p>
-//       </div>
-//       <p className="read-the-docs">
-//         Click on the Vite and React logos to learn more
-//       </p>
-//     </>
-//   )
-// }
+export default function App() {
+  const [input, setInput] = useState("");
+  const [history, setHistory] = useState<{expr:string,result:string}[]>([]);
+  const [loading, setLoading] = useState(false);
 
-// export default App
+  function append(value:string){
+    if(["sin","cos","tan","log","ln"].includes(value)){
+      setInput(prev => prev + value + "(");
+    } else {
+      setInput(prev => prev + value);
+    }
+  }
 
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import './App.css';
+  function clear(){
+    setInput("");
+  }
 
-function App() {
-  const [message, setMessage] = useState('');
+  async function submit(){
+    if(!input.trim()) return;
 
-  useEffect(() => {
-    const fetchMessage = async () => {
-      try {
-        // Adjust the URL if your backend port is different
-        const response = await axios.get('http://localhost:5000/');
-        setMessage(response.data);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setMessage('Failed to connect to backend.');
+    console.log(input);
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("http://localhost:5000/evaluate",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ payload: input })
+      });
+
+      const data = await res.json();
+
+      const value = typeof data === "number" ? data.toString() : String(data);
+
+      setHistory(prev => [...prev,{expr:input,result:value}]);
+      setInput("");
+    } catch(err) {
+      setHistory(prev => [...prev,{expr:input,result:`Error contacting server ${err}`}]);
+    }
+
+    setLoading(false);
+  }
+
+  useEffect(()=>{
+    function handleKey(e:KeyboardEvent){
+      if(e.key === "Enter"){
+        submit();
+        return;
       }
-    };
 
-    fetchMessage();
-  }, []);
+      const allowed = "0123456789.+-*/^()";
+
+      if(allowed.includes(e.key)){
+        setInput(prev=>prev+e.key);
+      }
+
+      if(e.key === "Backspace"){
+        setInput(prev=>prev.slice(0,-1));
+      }
+    }
+
+    window.addEventListener("keydown",handleKey);
+    return ()=>window.removeEventListener("keydown",handleKey);
+  },[input]);
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Fullstack App with TypeScript</h1>
-        <p>Backend Message: {message}</p>
-      </header>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="bg-white shadow-xl rounded-2xl p-6 w-[360px]">
+
+        <div className="mb-4">
+          <div className="border rounded-lg p-3 text-right text-xl min-h-[40px]">
+            {input}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {buttons.map(b => (
+            <button
+              key={b}
+              onClick={()=>append(b)}
+              className="bg-gray-200 hover:bg-gray-300 rounded-lg p-2"
+            >
+              {b}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={clear}
+            className="flex-1 bg-red-400 hover:bg-red-500 text-white rounded-lg p-2"
+          >
+            Clear
+          </button>
+
+          <button
+            onClick={submit}
+            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg p-2"
+          >
+            Enter
+          </button>
+        </div>
+
+        <div className="border-t pt-3 max-h-[300px] overflow-y-auto">
+          {history.slice().reverse().map((h,i)=>(
+            <div key={i} className="mb-2">
+              <div className="text-left text-gray-700">{h.expr}</div>
+              <div className="text-right font-semibold">{h.result}</div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="text-right text-gray-400">Computing...</div>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 }
-
-export default App;
-

@@ -81,21 +81,6 @@ export default function App() {
       fontFamily: "sans-serif",
     },
 
-    calculator: {
-      width: "90vw",
-      height: "90vh",
-      maxWidth: 1200,
-      background: "white",
-      borderRadius: 24,
-      padding: 30,
-      boxShadow: "0 15px 40px rgba(0,0,0,0.2)",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      gap: 30,
-    },
-
     screen: {
       width: "100%",
       background: "#e2e8f0",
@@ -118,13 +103,20 @@ export default function App() {
       border: "1px solid #cbd5e1",
     },
 
-    history: {
-      background: "#f8fafc",
-      borderRadius: 10,
-      border: "1px solid #cbd5e1",
-      padding: 12,
-      maxHeight: "25vh",
-      overflowY: "auto",
+    calculator: {
+      width: "90vw",
+      height: "90vh",
+      maxWidth: 1200,
+      background: "white",
+      borderRadius: 24,
+      padding: 30,
+      boxShadow: "0 15px 40px rgba(0,0,0,0.2)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      gap: 30,
+      overflow: "hidden",
       fontSize: 18,
       color: "#0f172a",
     },
@@ -321,3 +313,4 @@ export default function App() {
     </div>
   );
 }
+
